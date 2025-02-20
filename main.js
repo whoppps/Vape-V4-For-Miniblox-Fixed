@@ -3,7 +3,7 @@
 // @namespace    https://github.com/whoppps
 // @version      2024-07-29
 // @description  A browser script made to give enhancements on miniblox.io
-// @author       OlehSavenko-cell
+// @author       whoppps
 // @match        https://miniblox.io/*
 // @icon         https://miniblox.io/favicon.png
 // @grant        GM_getValue
