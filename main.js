@@ -17,7 +17,8 @@
 
 	async function execute(url, oldScript) {
 		if (oldScript) oldScript.type = 'javascript/blocked';
-		let data = await fetch("https://raw.githubusercontent.com/whoppps/Dream-hacked-client-miniblox/main/injection.js").then(e => e.text());
+		let data = await fetch("https://raw.githubusercontent.com/whoppps/Vape-V4-For-Miniblox-Fixed
+/main/injection.js").then(e => e.text());
 		if (oldScript) oldScript.type = 'module';
 		eval(data.replace("scripturl", url));
 	}
