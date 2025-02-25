@@ -5,7 +5,7 @@ let replacements = {};
 let dumpedVarNames = {};
 const storeName = "a" + crypto.randomUUID().replaceAll("-", "").substring(16);
 const vapeName = crypto.randomUUID().replaceAll("-", "").substring(16);
-const VERSION = "3.0.4";
+const VERSION = "3.0.5";
 
 // ANTICHEAT HOOK
 function replaceAndCopyFunction(oldFunc, newFunc) {
@@ -31,7 +31,7 @@ Object.getOwnPropertyDescriptors = replaceAndCopyFunction(Object.getOwnPropertyD
 });
 
 /**
- * 
+ *
  * @param {string} replacement
  * @param {string} code
  * @param {boolean} replace
@@ -45,8 +45,8 @@ function addDump(replacement, code) {
 }
 
 /**
- * 
- * @param {string} text 
+ *
+ * @param {string} text
  */
 function modifyCode(text) {
 	let modifiedText = text;
@@ -85,8 +85,8 @@ function modifyCode(text) {
 	'use strict';
 
 	// DUMPING
-	addDump('moveStrafeDump', 'strafe:this\.([a-zA-Z]*)');
-	addDump('moveForwardDump', 'forward:this\.([a-zA-Z]*)');
+	addDump('moveStrafeDump', 'this\\.([a-zA-Z]+)=\\([a-zA-Z]+\\.right');
+	addDump('moveForwardDump', 'this\\.([a-zA-Z]+)=\\([a-zA-Z]+\\.(up|down)');
 	addDump('keyPressedDump', 'function ([a-zA-Z]*)\\([a-zA-Z]*\\)\{return keyPressed\\([a-zA-Z]*\\)');
 	addDump('entitiesDump', 'this\.([a-zA-Z]*)\.values\\(\\)\\)[a-zA-Z]* instanceof EntityTNTPrimed');
 	addDump('isInvisibleDump', '[a-zA-Z]*\.([a-zA-Z]*)\\(\\)\\)&&\\([a-zA-Z]*=new ([a-zA-Z]*)\\(new');
@@ -297,7 +297,7 @@ function modifyCode(text) {
 	`);
 
 	// KEEPSPRINT
-	addModification('g>0&&(h.addVelocity(-Math.sin(this.yaw)*g*.5,.1,-Math.cos(this.yaw)*g*.5),this.motion.x*=.6,this.motion.z*=.6,this.setSprinting(!1)),', `
+	addModification('g>0&&(h.addVelocity(-Math.sin(this.yaw*Math.PI/180)*g*.5,.1,Math.cos(this.yaw*Math.PI/180)*g*.5),this.motion.x*=.6,this.motion.z*=.6)', `
 		if (g > 0) {
 h.addVelocity(-Math.sin(this.yaw) * g * .5, .1, -Math.cos(this.yaw) * g * .5);
 			if (this != player || !enabledModules["KeepSprint"]) {
@@ -319,7 +319,8 @@ h.addVelocity(-Math.sin(this.yaw) * g * .5, .1, -Math.cos(this.yaw) * g * .5);
 	// NOSLOWDOWN
 	addModification('updatePlayerMoveState(),this.isUsingItem()', 'updatePlayerMoveState(),(this.isUsingItem() && !enabledModules["NoSlowdown"])', true);
 	addModification('S&&!this.isUsingItem()', 'S&&!(this.isUsingItem() && !enabledModules["NoSlowdown"])', true);
-	addModification('0),this.sneak', ' && !enabledModules["NoSlowdown"]');
+	// TODO: fix this
+	// addModification('0),this.sneak', ' && !enabledModules["NoSlowdown"]');
 
 	// STEP
 	addModification('p.y=this.stepHeight;', 'p.y=(enabledModules["Step"]?Math.max(stepheight[1],this.stepHeight):this.stepHeight);', true);
@@ -441,7 +442,7 @@ h.addVelocity(-Math.sin(this.yaw) * g * .5, .1, -Math.cos(this.yaw) * g * .5);
 
 	// SWING FIX
 	addModification('player.getActiveItemStack().item instanceof', 'null == ', true);
-	
+
 	// CONTAINER FIX (vector is very smart)
 	/**
 	 Description:
@@ -628,6 +629,14 @@ h.addVelocity(-Math.sin(this.yaw) * g * .5, .1, -Math.cos(this.yaw) * g * .5);
 						// TODO: track the player's position and get the difference from previous position to new position.
 				}
 			})
+
+            function reloadTickLoop(value) {
+				if (game.tickLoop) {
+					MSPT = value;
+					clearInterval(game.tickLoop);
+					game.tickLoop = setInterval(() => game.fixedUpdate(), MSPT);
+				}
+			}
 
 			new Module("Sprint", function() {});
 			const velocity = new Module("Velocity", function() {});
@@ -837,19 +846,38 @@ h.addVelocity(-Math.sin(this.yaw) * g * .5, .1, -Math.cos(this.yaw) * g * .5);
 			}
 
 			// Fly
-			let flyvalue, flyvert, flybypass;
+			let flyvalue, flyvert, flybypass, flytimer, flytick, funny;
 			const fly = new Module("Fly", function(callback) {
+                reloadTickLoop(callback ? 50 / flytimer[1] : 50);
 				if (callback) {
+                    funny = false;
 					let ticks = 0;
+                    let flyticks = 0;
+                    let setticks = 0;
 					tickLoop["Fly"] = function() {
 						ticks++;
-						const dir = getMoveDirection(flyvalue[1]);
-						player.motion.x = dir.x;
-						player.motion.z = dir.z;
-						player.motion.y = keyPressedDump("space") ? flyvert[1] : (keyPressedDump("shift") ? -flyvert[1] : 0);
+                        if (!funny) {
+                            funny = player.motion.y <= 0 && !player.onGround;
+                            if (funny) {
+                              flyticks = flytick[1];
+                            }
+                        }
+
+                        if (flyticks > 0) {
+                            flyticks--;
+                            setticks = 3;
+                            const dir = getMoveDirection(flyticks <= 0 ? 0.26 : flyvalue[1]);
+						    player.motion.x = dir.x;
+						    player.motion.z = dir.z;
+						    player.motion.y = flyticks >= 1 ? 0 : player.motion.y;
+                        }
+
+                        if (setticks > 0) {
+                            setticks--;
+                            if (setticks <= 0) fly.toggle();
+                        }
 					};
-				}
-				else {
+				} else {
 					delete tickLoop["Fly"];
 					if (player) {
 						player.motion.x = Math.max(Math.min(player.motion.x, 0.3), -0.3);
@@ -859,6 +887,8 @@ h.addVelocity(-Math.sin(this.yaw) * g * .5, .1, -Math.cos(this.yaw) * g * .5);
 			});
 			flybypass = fly.addoption("Bypass", Boolean, true);
 			flyvalue = fly.addoption("Speed", Number, 2);
+            flytimer = fly.addoption("Timer", Number, 0.5);
+            flytick = fly.addoption("Ticks", Number, 6);
 			flyvert = fly.addoption("Vertical", Number, 0.7);
 
 			let jumpflyvalue, jumpflyvert, jumpFlyUpMotion, jumpFlyGlide;
@@ -906,7 +936,7 @@ h.addVelocity(-Math.sin(this.yaw) * g * .5, .1, -Math.cos(this.yaw) * g * .5);
 					tickLoop["Speed"] = function() {
 						lastjump++;
 						const oldMotion = new Vector3$1(player.motion.x, 0, player.motion.z);
-						const dir = getMoveDirection(speedvalue[1]);
+						const dir = getMoveDirection(Math.max(oldMotion.length(), speedvalue[1]));
 						lastjump = player.onGround ? 0 : lastjump;
 						player.motion.x = dir.x;
 						player.motion.z = dir.z;
@@ -1147,14 +1177,6 @@ h.addVelocity(-Math.sin(this.yaw) * g * .5, .1, -Math.cos(this.yaw) * g * .5);
 			});
 			scaffoldtower = scaffold.addoption("Tower", Boolean, true);
 			// scaffoldextend = scaffold.addoption("Extend", Number, 0);
-
-			function reloadTickLoop(value) {
-				if (game.tickLoop) {
-					MSPT = value;
-					clearInterval(game.tickLoop);
-					game.tickLoop = setInterval(() => game.fixedUpdate(), MSPT);
-				}
-			}
 
 			let timervalue;
 			const timer = new Module("Timer", function(callback) {
