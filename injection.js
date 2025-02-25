@@ -869,8 +869,6 @@ h.addVelocity(-Math.sin(this.yaw) * g * .5, .1, -Math.cos(this.yaw) * g * .5);
 			flybypass = fly.addoption("Bypass", Boolean, true);
 			flyvalue = fly.addoption("Speed", Number, 2);
 			flyvert = fly.addoption("Vertical", Number, 0.7);
-
-			let jumpflyvalue, jumpflyvert, jumpFlyUpMotion, jumpFlyGlide;
 			// JumpFly
 			const jumpfly = new Module("JumpFly", function(callback) {
 				if (callback) {
