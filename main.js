@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Vape V4
-// @namespace    https://github.com/OlehSavenko-cell
+// @namespace    https://github.com/whoppps
 // @version      2024-07-29
 // @description  A browser script made to give enhancements on miniblox.io
 // @author       whoppps
