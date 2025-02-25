@@ -846,19 +846,38 @@ h.addVelocity(-Math.sin(this.yaw) * g * .5, .1, -Math.cos(this.yaw) * g * .5);
 			}
 
 			// Fly
-			let flyvalue, flyvert, flybypass;
+			let flyvalue, flyvert, flybypass, flytimer, flytick, funny;
 			const fly = new Module("Fly", function(callback) {
+                reloadTickLoop(callback ? 50 / flytimer[1] : 50);
 				if (callback) {
+                    funny = false;
 					let ticks = 0;
+                    let flyticks = 0;
+                    let setticks = 0;
 					tickLoop["Fly"] = function() {
 						ticks++;
-						const dir = getMoveDirection(flyvalue[1]);
-						player.motion.x = dir.x;
-						player.motion.z = dir.z;
-						player.motion.y = keyPressedDump("space") ? flyvert[1] : (keyPressedDump("shift") ? -flyvert[1] : 0);
+                        if (!funny) {
+                            funny = player.motion.y <= 0 && !player.onGround;
+                            if (funny) {
+                              flyticks = flytick[1];
+                            }
+                        }
+
+                        if (flyticks > 0) {
+                            flyticks--;
+                            setticks = 3;
+                            const dir = getMoveDirection(flyticks <= 0 ? 0.26 : flyvalue[1]);
+						    player.motion.x = dir.x;
+						    player.motion.z = dir.z;
+						    player.motion.y = flyticks >= 1 ? 0 : player.motion.y;
+                        }
+
+                        if (setticks > 0) {
+                            setticks--;
+                            if (setticks <= 0) fly.toggle();
+                        }
 					};
-				}
-				else {
+				} else {
 					delete tickLoop["Fly"];
 					if (player) {
 						player.motion.x = Math.max(Math.min(player.motion.x, 0.3), -0.3);
@@ -867,8 +886,11 @@ h.addVelocity(-Math.sin(this.yaw) * g * .5, .1, -Math.cos(this.yaw) * g * .5);
 				}
 			});
 			flybypass = fly.addoption("Bypass", Boolean, true);
-			flyvalue = fly.addoption("Speed", Number, 2);
-			flyvert = fly.addoption("Vertical", Number, 0.7);
+			flyvalue = fly.addoption("Speed", Number, 0.4);
+            flytimer = fly.addoption("Timer", Number, 1);
+			flyvert = fly.addoption("Vertical", Number, 1);
+
+			let jumpflyvalue, jumpflyvert, jumpFlyUpMotion, jumpFlyGlide;
 			// JumpFly
 			const jumpfly = new Module("JumpFly", function(callback) {
 				if (callback) {
